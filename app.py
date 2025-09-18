@@ -217,6 +217,15 @@ def index():
         return render_template('index.html', logged_in=True, username=session['username'])
     return render_template('index.html', logged_in=False)
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render.com"""
+    return jsonify({
+        "status": "healthy",
+        "service": "LDsub", 
+        "version": "1.0.0"
+    }), 200
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
