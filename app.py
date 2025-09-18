@@ -1,5 +1,6 @@
 import os
 import subprocess
+import logging
 # Thay thế import whisper bằng faster-whisper
 from faster_whisper import WhisperModel
 from flask import Flask, request, jsonify, send_file, render_template, session, redirect, url_for
@@ -21,6 +22,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Increase max file size to 2GB to handle large video files
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max file size
 
+# Configure logging for production
+if os.environ.get('FLASK_ENV') == 'production':
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
+
 # Global model variable for caching
 whisper_model = None
 current_model_size = None
@@ -29,11 +35,15 @@ def get_whisper_model(model_size="tiny"):
     """Get cached Whisper model or load if not exists"""
     global whisper_model, current_model_size
     if whisper_model is None or current_model_size != model_size:
-        print(f"Đang tải mô hình Whisper {model_size}...")
-        # Use faster-whisper model
-        whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        current_model_size = model_size
-        print("Mô hình Whisper đã sẵn sàng.")
+        try:
+            app.logger.info(f"Đang tải mô hình Whisper {model_size}...")
+            # Use faster-whisper model
+            whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            current_model_size = model_size
+            app.logger.info("Mô hình Whisper đã sẵn sàng.")
+        except Exception as e:
+            app.logger.error(f"Lỗi khi tải mô hình Whisper: {e}")
+            raise
     return whisper_model
 
 # User database file
@@ -213,7 +223,12 @@ def burn_subtitles_to_video(video_path, srt_path, output_path, position='bottom'
         subprocess.run(command, check=True, capture_output=True)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Lỗi khi thêm phụ đề vào video: {e}")
+        app.logger.error(f"Lỗi khi thêm phụ đề vào video: {e}")
+        if e.stderr:
+            app.logger.error(f"FFmpeg stderr: {e.stderr.decode()}")
+        return False
+    except Exception as e:
+        app.logger.error(f"Lỗi không xác định khi thêm phụ đề: {e}")
         return False
 
 @app.route('/')
@@ -221,6 +236,11 @@ def index():
     if 'username' in session:
         return render_template('index.html', logged_in=True, username=session['username'])
     return render_template('index.html', logged_in=False)
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render.com"""
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
