@@ -8,15 +8,11 @@ faster-whisper==0.9.0
 # Translation
 deep-translator==1.11.4
 
-# Additional dependencies that may be needed
-# For audio/video file handling (if needed)
-# moviepy==1.0.3
+# Production server for Render.com
+gunicorn==21.2.0
 
-# For better audio processing (optional)
-# librosa==0.10.1
+# Environment variables support
+python-dotenv==1.0.0
 
-# Production server (optional)
-# gunicorn==21.2.0
-
-# Development tools (optional)
-# python-dotenv==1.0.0
+# Additional dependencies for production
+requests==2.31.0

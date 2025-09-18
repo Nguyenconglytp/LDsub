@@ -24,4 +24,7 @@ echo "Bắt đầu cài đặt các package Python..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Tạo thư mục uploads nếu chưa có
+mkdir -p uploads
+
 echo "Đã cài xong các package Python. Build hoàn tất."
