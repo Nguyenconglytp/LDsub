@@ -1,13 +1,27 @@
 #!/usr/bin/env bash
+# exit on error
 set -o errexit
-set -o nounset
 
-# Cập nhật danh sách package
-apt-get update
+echo "Bắt đầu cài đặt thư viện hệ thống..."
 
-# Cài đặt các thư viện hệ thống cần thiết cho audio/video và librosa
-apt-get install -y ffmpeg libsndfile1 libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
+# Cập nhật và cài đặt các thư viện cần thiết cho audio/video
+apt-get update && apt-get install -y --no-install-recommends \
+  ffmpeg \
+  libsndfile1 \
+  libavformat-dev \
+  libavcodec-dev \
+  libavdevice-dev \
+  libavutil-dev \
+  libavfilter-dev \
+  libswscale-dev \
+  libswresample-dev \
+  pkg-config
 
-# Cài đặt các package Python
+echo "Đã cài xong thư viện hệ thống."
+echo "Bắt đầu cài đặt các package Python..."
+
+# Nâng cấp pip và cài đặt từ requirements.txt
 pip install --upgrade pip
 pip install -r requirements.txt
+
+echo "Đã cài xong các package Python. Build hoàn tất."
