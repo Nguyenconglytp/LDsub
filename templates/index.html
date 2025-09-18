@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to SRT by LyDev - Advanced Subtitle Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4cc9f0;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .user-info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .user-info a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .user-info a:hover {
+            text-decoration: underline;
+        }
+        
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            padding: 10px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background-color: #f8f9fa;
+        }
+        
+        .file-upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: #eef2ff;
+        }
+        
+        .file-upload-area.dragover {
+            border-color: var(--primary-color);
+            background-color: #eef2ff;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .progress-bar-custom {
+            height: 10px;
+            border-radius: 5px;
+        }
+        
+        .feature-tabs .nav-link {
+            color: var(--dark-color);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-tabs .nav-link.active {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .feature-tabs .nav-link:hover:not(.active) {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .language-select {
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="main-container">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-closed-captioning"></i> Video to SRT by LyDev</h1>
+                <p class="mb-0">Công cụ chuyển đổi video thành phụ đề SRT mạnh mẽ với nhiều tính năng nâng cao</p>
+                
+                <!-- User Info -->
+                {% if logged_in %}
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span>{{ username }}</span>
+                    <a href="{{ url_for('logout') }}">Đăng xuất</a>
+                </div>
+                {% else %}
+                <div class="user-info">
+                    <a href="{{ url_for('login') }}">Đăng nhập</a>
+                    <span>|</span>
+                    <a href="{{ url_for('register') }}">Đăng ký</a>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Main Content -->
+            <div class="container-fluid p-4">
+                <!-- Feature Tabs -->
+                <ul class="nav nav-tabs feature-tabs mb-4" id="featureTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="transcribe-tab" data-bs-toggle="tab" data-bs-target="#transcribe" type="button" role="tab">
+                            <i class="fas fa-microphone-alt"></i> Tạo Phụ đề
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="translate-tab" data-bs-toggle="tab" data-bs-target="#translate" type="button" role="tab">
+                            <i class="fas fa-language"></i> Dịch Phụ đề
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="burn-tab" data-bs-toggle="tab" data-bs-target="#burn" type="button" role="tab">
+                            <i class="fas fa-video"></i> Thêm Text vào Video
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- Tab Content -->
+                <div class="tab-content" id="featureTabsContent">
+                    <!-- Transcribe Tab -->
+                    <div class="tab-pane fade show active" id="transcribe" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body">
+                                        <div class="text-center feature-icon">
+                                            <i class="fas fa-file-video"></i>
+                                        </div>
+                                        <h5 class="card-title text-center">Tải lên Video</h5>
+                                        <p class="card-text text-center">Chọn video để tạo phụ đề SRT tự động</p>
+                                        
+                                        <form id="upload-form">
+                                            <div class="file-upload-area" id="drop-area">
+                                                <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: #4361ee;"></i>
+                                                <p>Kéo và thả video vào đây hoặc</p>
+                                                <input type="file" id="video-file" name="video" accept="video/*" class="d-none" required>
+                                                <button type="button" class="btn btn-outline-primary" id="browse-btn">Chọn File</button>
+                                                <div class="mt-2">
+                                                    <small class="text-muted">Hỗ trợ: MP4, AVI, MOV, MKV</small>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-3">
+                                                <label class="form-label">Ngôn ngữ video:</label>
+                                                <select class="form-select language-select" id="video-language">
+                                                    <option value="vi">Tiếng Việt</option>
+                                                    <option value="en">Tiếng Anh</option>
+                                                    <option value="fr">Tiếng Pháp</option>
+                                                    <option value="es">Tiếng Tây Ban Nha</option>
+                                                    <option value="zh">Tiếng Trung</option>
+                                                    <option value="ja">Tiếng Nhật</option>
+                                                    <option value="ko">Tiếng Hàn</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="mt-3">
+                                                <label class="form-label">Độ chính xác:</label>
+                                                <select class="form-select language-select" id="accuracy-level">
+                                                    <option value="base">Cơ bản (nhanh)</option>
+                                                    <option value="medium">Trung bình</option>
+                                                    <option value="large">Cao (chậm hơn)</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="d-grid mt-4">
+                                                <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
+                                                    <i class="fas fa-closed-captioning"></i> Tạo Phụ đề
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body">
+                                        <div class="text-center feature-icon">
+                                            <i class="fas fa-tasks"></i>
+                                        </div>
+                                        <h5 class="card-title text-center">Trạng thái</h5>
+                                        
+                                        <div class="spinner d-none" id="spinner"></div>
+                                        
+                                        <div class="progress d-none mb-3" id="progress-container">
+                                            <div class="progress-bar progress-bar-custom" role="progressbar" style="width: 0%" id="progress-bar"></div>
+                                        </div>
+                                        
+                                        <div id="status" class="text-center py-4">
+                                            <i class="fas fa-info-circle fa-2x mb-3" style="color: #4361ee;"></i>
+                                            <p class="mb-0">Chọn video và nhấn "Tạo Phụ đề" để bắt đầu</p>
+                                        </div>
+                                        
+                                        <div id="result-section" class="d-none">
+                                            <div class="alert alert-success">
+                                                <h6><i class="fas fa-check-circle"></i> Hoàn thành!</h6>
+                                                <p>Phụ đề SRT đã được tạo thành công.</p>
+                                                <button class="btn btn-success w-100" id="download-btn">
+                                                    <i class="fas fa-download"></i> Tải xuống SRT
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Translate Tab -->
+                    <div class="tab-pane fade" id="translate" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body">
+                                        <div class="text-center feature-icon">
+                                            <i class="fas fa-language"></i>
+                                        </div>
+                                        <h5 class="card-title text-center">Dịch Phụ đề SRT</h5>
+                                        <p class="card-text text-center">Dịch phụ đề từ ngôn ngữ này sang ngôn ngữ khác</p>
+                                        
+                                        <form id="translate-form">
+                                            <div class="file-upload-area" id="srt-drop-area">
+                                                <i class="fas fa-file-alt fa-3x mb-3" style="color: #4361ee;"></i>
+                                                <p>Kéo và thả file SRT vào đây hoặc</p>
+                                                <input type="file" id="srt-file" name="srt" accept=".srt" class="d-none" required>
+                                                <button type="button" class="btn btn-outline-primary" id="browse-srt-btn">Chọn File SRT</button>
+                                            </div>
+                                            
+                                            <div class="row mt-3">
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Từ ngôn ngữ:</label>
+                                                    <select class="form-select language-select" id="from-language">
+                                                        <option value="vi">Tiếng Việt</option>
+                                                        <option value="en">Tiếng Anh</option>
+                                                        <option value="fr">Tiếng Pháp</option>
+                                                        <option value="es">Tiếng Tây Ban Nha</option>
+                                                        <option value="zh">Tiếng Trung</option>
+                                                        <option value="ja">Tiếng Nhật</option>
+                                                        <option value="ko">Tiếng Hàn</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label class="form-label">Sang ngôn ngữ:</label>
+                                                    <select class="form-select language-select" id="to-language">
+                                                        <option value="en">Tiếng Anh</option>
+                                                        <option value="vi">Tiếng Việt</option>
+                                                        <option value="fr">Tiếng Pháp</option>
+                                                        <option value="es">Tiếng Tây Ban Nha</option>
+                                                        <option value="zh">Tiếng Trung</option>
+                                                        <option value="ja">Tiếng Nhật</option>
+                                                        <option value="ko">Tiếng Hàn</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="d-grid mt-4">
+                                                <button type="submit" class="btn btn-primary btn-lg" id="translate-btn">
+                                                    <i class="fas fa-exchange-alt"></i> Dịch Phụ đề
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body">
+                                        <div class="text-center feature-icon">
+                                            <i class="fas fa-file-code"></i>
+                                        </div>
+                                        <h5 class="card-title text-center">Kết quả Dịch</h5>
+                                        
+                                        <div class="spinner d-none" id="translate-spinner"></div>
+                                        
+                                        <div id="translate-status" class="text-center py-4">
+                                            <i class="fas fa-language fa-2x mb-3" style="color: #4361ee;"></i>
+                                            <p class="mb-0">Tải file SRT và chọn ngôn ngữ để dịch</p>
+                                        </div>
+                                        
+                                        <div id="translate-result" class="d-none">
+                                            <div class="alert alert-success">
+                                                <h6><i class="fas fa-check-circle"></i> Dịch thành công!</h6>
+                                                <p>File SRT đã được dịch sang ngôn ngữ mới.</p>
+                                                <button class="btn btn-success w-100" id="download-translated-btn">
+                                                    <i class="fas fa-download"></i> Tải xuống SRT đã dịch
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Burn Text Tab -->
+                    <div class="tab-pane fade" id="burn" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body">
+                                        <div class="text-center feature-icon">
+                                            <i class="fas fa-video"></i>
+                                        </div>
+                                        <h5 class="card-title text-center">Thêm Text vào Video</h5>
+                                        <p class="card-text text-center">Thêm phụ đề SRT vào video và xuất ra file mới</p>
+                                        
+                                        <form id="burn-form">
+                                            <div class="mb-3">
+                                                <label class="form-label">Chọn Video:</label>
+                                                <div class="file-upload-area" id="video-burn-drop-area">
+                                                    <i class="fas fa-file-video fa-3x mb-3" style="color: #4361ee;"></i>
+                                                    <p>Kéo và thả video vào đây hoặc</p>
+                                                    <input type="file" id="video-burn-file" name="video" accept="video/*" class="d-none" required>
+                                                    <button type="button" class="btn btn-outline-primary" id="browse-video-burn-btn">Chọn Video</button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Chọn File SRT:</label>
+                                                <div class="file-upload-area" id="srt-burn-drop-area">
+                                                    <i class="fas fa-file-alt fa-3x mb-3" style="color: #4361ee;"></i>
+                                                    <p>Kéo và thả file SRT vào đây hoặc</p>
+                                                    <input type="file" id="srt-burn-file" name="srt" accept=".srt" class="d-none" required>
+                                                    <button type="button" class="btn btn-outline-primary" id="browse-srt-burn-btn">Chọn File SRT</button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Vị trí Text:</label>
+                                                <select class="form-select language-select" id="text-position">
+                                                    <option value="bottom">Dưới cùng</option>
+                                                    <option value="top">Trên cùng</option>
+                                                    <option value="middle">Giữa màn hình</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label class="form-label">Màu Text:</label>
+                                                <select class="form-select language-select" id="text-color">
+                                                    <option value="white">Trắng</option>
+                                                    <option value="yellow">Vàng</option>
+                                                    <option value="red">Đỏ</option>
+                                                    <option value="blue">Xanh dương</option>
+                                                    <option value="green">Xanh lá</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div class="d-grid mt-2">
+                                                <button type="submit" class="btn btn-primary btn-lg" id="burn-btn">
+                                                    <i class="fas fa-burn"></i> Thêm Text vào Video
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card feature-card h-100">
+                                    <div class="card-body">
+                                        <div class="text-center feature-icon">
+                                            <i class="fas fa-film"></i>
+                                        </div>
+                                        <h5 class="card-title text-center">Kết quả</h5>
+                                        
+                                        <div class="spinner d-none" id="burn-spinner"></div>
+                                        
+                                        <div id="burn-status" class="text-center py-4">
+                                            <i class="fas fa-video fa-2x mb-3" style="color: #4361ee;"></i>
+                                            <p class="mb-0">Chọn video và file SRT để thêm text</p>
+                                        </div>
+                                        
+                                        <div id="burn-result" class="d-none">
+                                            <div class="alert alert-success">
+                                                <h6><i class="fas fa-check-circle"></i> Hoàn thành!</h6>
+                                                <p>Đã thêm text vào video thành công.</p>
+                                                <button class="btn btn-success w-100" id="download-burned-btn">
+                                                    <i class="fas fa-download"></i> Tải xuống Video
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <footer>
+                <p class="mb-0">© 2025 Video to SRT by LyDev - Công cụ tạo phụ đề video mạnh mẽ</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables to store file blobs
+        let transcribedSrtBlob = null;
+        let translatedSrtBlob = null;
+        let burnedVideoBlob = null;
+        let transcribedSrtFilename = null;
+        let translatedSrtFilename = null;
+        let burnedVideoFilename = null;
+        let transcribedSrtTaskId = null; // Add this line for task ID tracking
+
+        // DOM Elements
+        const dropArea = document.getElementById('drop-area');
+        const videoFileInput = document.getElementById('video-file');
+        const browseBtn = document.getElementById('browse-btn');
+        const uploadForm = document.getElementById('upload-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const spinner = document.getElementById('spinner');
+        const progressBar = document.getElementById('progress-bar');
+        const progressContainer = document.getElementById('progress-container');
+        const statusEl = document.getElementById('status');
+        const resultSection = document.getElementById('result-section');
+        const downloadBtn = document.getElementById('download-btn');
+
+        // SRT Translate Elements
+        const srtDropArea = document.getElementById('srt-drop-area');
+        const srtFileInput = document.getElementById('srt-file');
+        const browseSrtBtn = document.getElementById('browse-srt-btn');
+        const translateForm = document.getElementById('translate-form');
+        const translateBtn = document.getElementById('translate-btn');
+        const translateSpinner = document.getElementById('translate-spinner');
+        const translateStatus = document.getElementById('translate-status');
+        const translateResult = document.getElementById('translate-result');
+        const downloadTranslatedBtn = document.getElementById('download-translated-btn');
+
+        // Burn Text Elements
+        const videoBurnDropArea = document.getElementById('video-burn-drop-area');
+        const srtBurnDropArea = document.getElementById('srt-burn-drop-area');
+        const videoBurnFileInput = document.getElementById('video-burn-file');
+        const srtBurnFileInput = document.getElementById('srt-burn-file');
+        const browseVideoBurnBtn = document.getElementById('browse-video-burn-btn');
+        const browseSrtBurnBtn = document.getElementById('browse-srt-burn-btn');
+        const burnForm = document.getElementById('burn-form');
+        const burnBtn = document.getElementById('burn-btn');
+        const burnSpinner = document.getElementById('burn-spinner');
+        const burnStatus = document.getElementById('burn-status');
+        const burnResult = document.getElementById('burn-result');
+        const downloadBurnedBtn = document.getElementById('download-burned-btn');
+
+        // Event Listeners for File Uploads
+        browseBtn.addEventListener('click', () => videoFileInput.click());
+        browseSrtBtn.addEventListener('click', () => srtFileInput.click());
+        browseVideoBurnBtn.addEventListener('click', () => videoBurnFileInput.click());
+        browseSrtBurnBtn.addEventListener('click', () => srtBurnFileInput.click());
+
+        // Drag and Drop Events for Transcribe
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+            srtDropArea.addEventListener(eventName, preventDefaults, false);
+            videoBurnDropArea.addEventListener(eventName, preventDefaults, false);
+            srtBurnDropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, highlight, false);
+            srtDropArea.addEventListener(eventName, highlight, false);
+            videoBurnDropArea.addEventListener(eventName, highlight, false);
+            srtBurnDropArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, unhighlight, false);
+            srtDropArea.addEventListener(eventName, unhighlight, false);
+            videoBurnDropArea.addEventListener(eventName, unhighlight, false);
+            srtBurnDropArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropArea.classList.add('dragover');
+            srtDropArea.classList.add('dragover');
+            videoBurnDropArea.classList.add('dragover');
+            srtBurnDropArea.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropArea.classList.remove('dragover');
+            srtDropArea.classList.remove('dragover');
+            videoBurnDropArea.classList.remove('dragover');
+            srtBurnDropArea.classList.remove('dragover');
+        }
+
+        // Handle file drop
+        dropArea.addEventListener('drop', handleVideoDrop, false);
+        srtDropArea.addEventListener('drop', handleSrtDrop, false);
+        videoBurnDropArea.addEventListener('drop', handleVideoBurnDrop, false);
+        srtBurnDropArea.addEventListener('drop', handleSrtBurnDrop, false);
+
+        function handleVideoDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleVideoFiles(files);
+        }
+
+        function handleSrtDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleSrtFiles(files);
+        }
+
+        function handleVideoBurnDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleVideoBurnFiles(files);
+        }
+
+        function handleSrtBurnDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleSrtBurnFiles(files);
+        }
+
+        // Handle file selection
+        videoFileInput.addEventListener('change', function() {
+            handleVideoFiles(this.files);
+        });
+
+        srtFileInput.addEventListener('change', function() {
+            handleSrtFiles(this.files);
+        });
+
+        videoBurnFileInput.addEventListener('change', function() {
+            handleVideoBurnFiles(this.files);
+        });
+
+        srtBurnFileInput.addEventListener('change', function() {
+            handleSrtBurnFiles(this.files);
+        });
+
+        function handleVideoFiles(files) {
+            if (files.length) {
+                videoFileInput.files = files;
+                const fileName = files[0].name;
+                dropArea.innerHTML = `
+                    <i class="fas fa-file-video fa-3x mb-3" style="color: #28a745;"></i>
+                    <p>Đã chọn: ${fileName}</p>
+                    <button type="button" class="btn btn-outline-primary" id="browse-btn">Thay đổi File</button>
+                `;
+                document.getElementById('browse-btn').addEventListener('click', () => videoFileInput.click());
+            }
+        }
+
+        function handleSrtFiles(files) {
+            if (files.length) {
+                srtFileInput.files = files;
+                const fileName = files[0].name;
+                srtDropArea.innerHTML = `
+                    <i class="fas fa-file-alt fa-3x mb-3" style="color: #28a745;"></i>
+                    <p>Đã chọn: ${fileName}</p>
+                    <button type="button" class="btn btn-outline-primary" id="browse-srt-btn">Thay đổi File</button>
+                `;
+                document.getElementById('browse-srt-btn').addEventListener('click', () => srtFileInput.click());
+            }
+        }
+
+        function handleVideoBurnFiles(files) {
+            if (files.length) {
+                videoBurnFileInput.files = files;
+                const fileName = files[0].name;
+                videoBurnDropArea.innerHTML = `
+                    <i class="fas fa-file-video fa-3x mb-3" style="color: #28a745;"></i>
+                    <p>Đã chọn: ${fileName}</p>
+                    <button type="button" class="btn btn-outline-primary" id="browse-video-burn-btn">Thay đổi File</button>
+                `;
+                document.getElementById('browse-video-burn-btn').addEventListener('click', () => videoBurnFileInput.click());
+            }
+        }
+
+        function handleSrtBurnFiles(files) {
+            if (files.length) {
+                srtBurnFileInput.files = files;
+                const fileName = files[0].name;
+                srtBurnDropArea.innerHTML = `
+                    <i class="fas fa-file-alt fa-3x mb-3" style="color: #28a745;"></i>
+                    <p>Đã chọn: ${fileName}</p>
+                    <button type="button" class="btn btn-outline-primary" id="browse-srt-burn-btn">Thay đổi File</button>
+                `;
+                document.getElementById('browse-srt-burn-btn').addEventListener('click', () => srtBurnFileInput.click());
+            }
+        }
+
+        // Transcribe Form Submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!videoFileInput.files.length) {
+                showStatus('Vui lòng chọn một file video', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('video', videoFileInput.files[0]);
+            formData.append('language', document.getElementById('video-language').value);
+            formData.append('accuracy', document.getElementById('accuracy-level').value);
+
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            progressContainer.classList.remove('d-none');
+            resultSection.classList.add('d-none');
+            
+            statusEl.innerHTML = `
+                <div class="text-center">
+                    <p><i class="fas fa-cog fa-spin"></i> Đang xử lý video...</p>
+                    <p class="small text-muted">Quá trình này có thể mất vài phút tùy vào độ dài video</p>
+                </div>
+            `;
+
+            try {
+                // First, send the file for processing
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Server returned an invalid response. Please try again.');
+                }
+
+                if (response.status === 202) {
+                    // Processing started, get task ID
+                    const data = await response.json();
+                    const taskId = data.task_id;
+                    
+                    // Poll for task status
+                    await pollTaskStatus(taskId);
+                } else if (response.ok) {
+                    // For backward compatibility, handle direct response
+                    // Get filename from Content-Disposition header
+                    const disposition = response.headers.get('Content-Disposition');
+                    transcribedSrtFilename = 'subtitle.srt';
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            transcribedSrtFilename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    // Store blob for download
+                    transcribedSrtBlob = await response.blob();
+                    
+                    // Show success
+                    spinner.classList.add('d-none');
+                    progressContainer.classList.add('d-none');
+                    resultSection.classList.remove('d-none');
+                    statusEl.innerHTML = `
+                        <div class="text-center text-success">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <p class="mb-0">Tạo phụ đề thành công!</p>
+                        </div>
+                    `;
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Lỗi không xác định');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                spinner.classList.add('d-none');
+                progressContainer.classList.add('d-none');
+                
+                // Handle different types of errors
+                let errorMessage = 'Lỗi khi xử lý video';
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error instanceof TypeError && error.message.includes('Unexpected token')) {
+                    errorMessage = 'Lỗi kết nối đến máy chủ. Vui lòng thử lại sau.';
+                }
+                
+                showStatus(errorMessage, 'danger');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Function to poll task status
+        async function pollTaskStatus(taskId) {
+            const maxAttempts = 1800; // 30 minutes max
+            let attempts = 0;
+            
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/task_status/${taskId}`);
+                    
+                    // Check if response is JSON
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Server returned an invalid response during polling.');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        // Task completed, enable download
+                        spinner.classList.add('d-none');
+                        progressContainer.classList.add('d-none');
+                        resultSection.classList.remove('d-none');
+                        statusEl.innerHTML = `
+                            <div class="text-center text-success">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <p class="mb-0">Tạo phụ đề thành công!</p>
+                            </div>
+                        `;
+                        
+                        // Store task ID for download
+                        transcribedSrtTaskId = taskId;
+                        submitBtn.disabled = false;
+                        return;
+                    } else if (data.status === 'error') {
+                        // Task failed
+                        spinner.classList.add('d-none');
+                        progressContainer.classList.add('d-none');
+                        showStatus(data.error || 'Lỗi khi xử lý video', 'danger');
+                        submitBtn.disabled = false;
+                        return;
+                    } else if (data.status === 'processing') {
+                        // Update progress
+                        const progressPercent = data.progress || 0;
+                        progressBar.style.width = `${progressPercent}%`;
+                        statusEl.innerHTML = `
+                            <div class="text-center">
+                                <p><i class="fas fa-cog fa-spin"></i> ${data.message || 'Đang xử lý...'}</p>
+                                <p class="small text-muted">Tiến độ: ${progressPercent}%</p>
+                            </div>
+                        `;
+                        
+                        // Continue polling with adaptive interval
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            // Increase polling interval as processing takes longer to reduce server load
+                            const interval = Math.min(2000 + (attempts * 100), 5000); // Start at 2s, max 5s
+                            setTimeout(poll, interval);
+                        } else {
+                            throw new Error('Quá thời gian xử lý');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error polling task status:', error);
+                    spinner.classList.add('d-none');
+                    progressContainer.classList.add('d-none');
+                    
+                    // Handle different types of errors
+                    let errorMessage = 'Lỗi khi kiểm tra tiến trình xử lý';
+                    if (error.message) {
+                        errorMessage = error.message;
+                    } else if (error instanceof TypeError && error.message.includes('Unexpected token')) {
+                        errorMessage = 'Lỗi kết nối đến máy chủ. Vui lòng thử lại sau.';
+                    }
+                    
+                    showStatus(errorMessage, 'danger');
+                    submitBtn.disabled = false;
+                }
+            };
+            
+            // Start polling
+            poll();
+        }
+
+        // Download button for transcribed SRT
+        downloadBtn.addEventListener('click', async () => {
+            if (transcribedSrtTaskId) {
+                // For background processed files
+                window.open(`/download_srt/${transcribedSrtTaskId}`, '_blank');
+            } else if (transcribedSrtBlob) {
+                // For direct download (backward compatibility)
+                const url = URL.createObjectURL(transcribedSrtBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = transcribedSrtFilename || 'subtitle.srt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
+
+        // Translate Form Submission
+        translateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!srtFileInput.files.length) {
+                showTranslateStatus('Vui lòng chọn một file SRT', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('srt', srtFileInput.files[0]);
+            formData.append('from_lang', document.getElementById('from-language').value);
+            formData.append('to_lang', document.getElementById('to-language').value);
+
+            // Show loading state
+            translateBtn.disabled = true;
+            translateSpinner.classList.remove('d-none');
+            translateResult.classList.add('d-none');
+            
+            showTranslateStatus('Đang dịch phụ đề...', 'info');
+
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    // Get filename
+                    const disposition = response.headers.get('Content-Disposition');
+                    translatedSrtFilename = 'translated_subtitle.srt';
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            translatedSrtFilename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    // Store blob for download
+                    translatedSrtBlob = await response.blob();
+                    
+                    // Show success
+                    translateSpinner.classList.add('d-none');
+                    translateResult.classList.remove('d-none');
+                    showTranslateStatus('Dịch phụ đề thành công!', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showTranslateStatus(`Lỗi: ${errorData.error}`, 'danger');
+                }
+            } catch (error) {
+                showTranslateStatus('Đã xảy ra lỗi mạng hoặc máy chủ không phản hồi.', 'danger');
+                console.error('Error:', error);
+            } finally {
+                translateBtn.disabled = false;
+                translateSpinner.classList.add('d-none');
+            }
+        });
+
+        // Download Translated SRT
+        downloadTranslatedBtn.addEventListener('click', () => {
+            if (translatedSrtBlob) {
+                downloadFile(translatedSrtBlob, translatedSrtFilename);
+            }
+        });
+
+        // Burn Text Form Submission
+        burnForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!videoBurnFileInput.files.length || !srtBurnFileInput.files.length) {
+                showBurnStatus('Vui lòng chọn cả video và file SRT', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('video', videoBurnFileInput.files[0]);
+            formData.append('srt', srtBurnFileInput.files[0]);
+            formData.append('position', document.getElementById('text-position').value);
+            formData.append('color', document.getElementById('text-color').value);
+
+            // Show loading state
+            burnBtn.disabled = true;
+            burnSpinner.classList.remove('d-none');
+            burnResult.classList.add('d-none');
+            
+            showBurnStatus('Đang thêm text vào video...', 'info');
+
+            try {
+                const response = await fetch('/burn', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (response.ok) {
+                    // Get filename
+                    const disposition = response.headers.get('Content-Disposition');
+                    burnedVideoFilename = 'video_with_subtitles.mp4';
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            burnedVideoFilename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    // Store blob for download
+                    burnedVideoBlob = await response.blob();
+                    
+                    // Show success
+                    burnSpinner.classList.add('d-none');
+                    burnResult.classList.remove('d-none');
+                    showBurnStatus('Thêm text vào video thành công!', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showBurnStatus(`Lỗi: ${errorData.error}`, 'danger');
+                }
+            } catch (error) {
+                showBurnStatus('Đã xảy ra lỗi mạng hoặc máy chủ không phản hồi.', 'danger');
+                console.error('Error:', error);
+            } finally {
+                burnBtn.disabled = false;
+                burnSpinner.classList.add('d-none');
+            }
+        });
+
+        // Download Burned Video
+        downloadBurnedBtn.addEventListener('click', () => {
+            if (burnedVideoBlob) {
+                downloadFile(burnedVideoBlob, burnedVideoFilename);
+            }
+        });
+
+        // Utility Functions
+        function showStatus(message, type = 'info') {
+            const alertClass = type === 'danger' ? 'alert-danger' : 
+                              type === 'success' ? 'alert-success' : 
+                              type === 'warning' ? 'alert-warning' : 'alert-info';
+            
+            statusEl.innerHTML = `
+                <div class="alert ${alertClass} mb-0">
+                    ${message}
+                </div>
+            `;
+        }
+
+        function showTranslateStatus(message, type = 'info') {
+            const alertClass = type === 'danger' ? 'alert-danger' : 
+                              type === 'success' ? 'alert-success' : 
+                              type === 'warning' ? 'alert-warning' : 'alert-info';
+            
+            translateStatus.innerHTML = `
+                <div class="alert ${alertClass} mb-0 text-center">
+                    ${message}
+                </div>
+            `;
+        }
+
+        function showBurnStatus(message, type = 'info') {
+            const alertClass = type === 'danger' ? 'alert-danger' : 
+                              type === 'success' ? 'alert-success' : 
+                              type === 'warning' ? 'alert-warning' : 'alert-info';
+            
+            burnStatus.innerHTML = `
+                <div class="alert ${alertClass} mb-0 text-center">
+                    ${message}
+                </div>
+            `;
+        }
+
+        function downloadFile(blob, filename) {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
