@@ -14,12 +14,17 @@ import uuid
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-this-in-production'  # Change this to a random secret key
-UPLOAD_FOLDER = 'uploads'
+# Use environment variable for secret key, fallback to a default for development
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+# Configure upload folder - use /tmp for ephemeral storage on Render.com
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', '/tmp/uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-# Increase max file size to 2GB to handle large video files
-app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max file size
+
+# Increase max file size to 500MB for Render.com (reduce from 2GB)
+max_file_size = int(os.environ.get('MAX_FILE_SIZE', 500 * 1024 * 1024))  # 500MB default
+app.config['MAX_CONTENT_LENGTH'] = max_file_size
 
 # Global model variable for caching
 whisper_model = None
@@ -211,6 +216,15 @@ def index():
     if 'username' in session:
         return render_template('index.html', logged_in=True, username=session['username'])
     return render_template('index.html', logged_in=False)
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render.com"""
+    return jsonify({
+        "status": "healthy",
+        "service": "LDsub", 
+        "version": "1.0.0"
+    }), 200
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -523,4 +537,7 @@ def burn_subtitles():
         return jsonify({"error": f"Lỗi không xác định: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Get port from environment variable (Render.com sets this)
+    port = int(os.environ.get('PORT', 5000))
+    # Bind to 0.0.0.0 for external access on Render.com
+    app.run(host='0.0.0.0', port=port, debug=False)

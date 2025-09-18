@@ -43,3 +43,6 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Temporary files
+/tmp/
