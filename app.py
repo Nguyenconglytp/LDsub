@@ -1,5 +1,6 @@
 import os
 import subprocess
+import logging
 # Thay thế import whisper bằng faster-whisper
 from faster_whisper import WhisperModel
 from flask import Flask, request, jsonify, send_file, render_template, session, redirect, url_for
@@ -14,12 +15,17 @@ import uuid
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here-change-this-in-production'  # Change this to a random secret key
-UPLOAD_FOLDER = 'uploads'
+app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-this-in-production')
+UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Increase max file size to 2GB to handle large video files
 app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024 * 1024  # 2GB max file size
+
+# Configure logging for production
+if os.environ.get('FLASK_ENV') == 'production':
+    logging.basicConfig(level=logging.INFO)
+    app.logger.setLevel(logging.INFO)
 
 # Global model variable for caching
 whisper_model = None
@@ -29,11 +35,15 @@ def get_whisper_model(model_size="tiny"):
     """Get cached Whisper model or load if not exists"""
     global whisper_model, current_model_size
     if whisper_model is None or current_model_size != model_size:
-        print(f"Đang tải mô hình Whisper {model_size}...")
-        # Use faster-whisper model
-        whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        current_model_size = model_size
-        print("Mô hình Whisper đã sẵn sàng.")
+        try:
+            app.logger.info(f"Đang tải mô hình Whisper {model_size}...")
+            # Use faster-whisper model
+            whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
+            current_model_size = model_size
+            app.logger.info("Mô hình Whisper đã sẵn sàng.")
+        except Exception as e:
+            app.logger.error(f"Lỗi khi tải mô hình Whisper: {e}")
+            raise
     return whisper_model
 
 # User database file
@@ -104,6 +114,16 @@ def cleanup_files(file_paths):
                 os.remove(file_path)
         except Exception as e:
             print(f"Warning: Could not remove file {file_path}: {e}")
+
+def cleanup_files_delayed(file_paths, delay=300):
+    """Remove files after a delay (default 5 minutes) to allow download completion"""
+    def delayed_cleanup():
+        time.sleep(delay)
+        cleanup_files(file_paths)
+    
+    thread = threading.Thread(target=delayed_cleanup)
+    thread.daemon = True
+    thread.start()
 
 def generate_srt(result):
     """Tạo nội dung file SRT từ kết quả của Whisper"""
@@ -203,7 +223,12 @@ def burn_subtitles_to_video(video_path, srt_path, output_path, position='bottom'
         subprocess.run(command, check=True, capture_output=True)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Lỗi khi thêm phụ đề vào video: {e}")
+        app.logger.error(f"Lỗi khi thêm phụ đề vào video: {e}")
+        if e.stderr:
+            app.logger.error(f"FFmpeg stderr: {e.stderr.decode()}")
+        return False
+    except Exception as e:
+        app.logger.error(f"Lỗi không xác định khi thêm phụ đề: {e}")
         return False
 
 @app.route('/')
@@ -211,6 +236,11 @@ def index():
     if 'username' in session:
         return render_template('index.html', logged_in=True, username=session['username'])
     return render_template('index.html', logged_in=False)
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render.com"""
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -390,12 +420,12 @@ def task_status(task_id):
 def download_srt(task_id):
     if task_id in tasks and tasks[task_id]['status'] == 'completed':
         result = tasks[task_id]['result']
-        # Clean up temporary files after download
+        # Clean up temporary files after download with delay
         temp_files = result.get('temp_files', [])
-        response = send_file(result['srt_path'], as_attachment=True, download_name=result['filename'])
-        # Clean up temp files after sending
-        cleanup_files(temp_files)
-        return response
+        temp_files.append(result['srt_path'])  # Also cleanup the SRT file
+        cleanup_files_delayed(temp_files)
+        
+        return send_file(result['srt_path'], as_attachment=True, download_name=result['filename'])
     else:
         return jsonify({'error': 'File not found or task not completed'}), 404
 
@@ -445,8 +475,8 @@ def translate_srt():
             with open(translated_srt_path, 'w', encoding='utf-8') as f:
                 f.write(translated_content)
 
-            # Xóa file tạm
-            os.remove(srt_path)
+            # Dọn dẹp file tạm và translated file sau delay
+            cleanup_files_delayed([srt_path, translated_srt_path])
 
             # Trả file SRT đã dịch về cho người dùng
             return send_file(translated_srt_path, as_attachment=True, download_name=f"{base_filename}_translated.srt")
@@ -501,18 +531,12 @@ def burn_subtitles():
             success = burn_subtitles_to_video(video_path, srt_path, output_path, position, color)
             
             if not success:
-                # Dọn dẹp file tạm
-                if os.path.exists(video_path):
-                    os.remove(video_path)
-                if os.path.exists(srt_path):
-                    os.remove(srt_path)
+                # Dọn dẹp file tạm ngay lập tức nếu thất bại
+                cleanup_files([video_path, srt_path])
                 return jsonify({"error": "Lỗi khi thêm phụ đề vào video. Đảm bảo FFmpeg đã được cài đặt."}), 500
 
-            # Dọn dẹp file tạm
-            if os.path.exists(video_path):
-                os.remove(video_path)
-            if os.path.exists(srt_path):
-                os.remove(srt_path)
+            # Dọn dẹp file tạm và output sau delay để cho phép download
+            cleanup_files_delayed([video_path, srt_path, output_path])
 
             # Trả video đã thêm phụ đề về cho người dùng
             return send_file(output_path, as_attachment=True, download_name=output_filename)
@@ -523,4 +547,7 @@ def burn_subtitles():
         return jsonify({"error": f"Lỗi không xác định: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)

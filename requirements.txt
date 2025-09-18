@@ -8,15 +8,15 @@ faster-whisper==0.9.0
 # Translation
 deep-translator==1.11.4
 
+# Production server
+gunicorn==21.2.0
+
 # Additional dependencies that may be needed
 # For audio/video file handling (if needed)
 # moviepy==1.0.3
 
 # For better audio processing (optional)
 # librosa==0.10.1
-
-# Production server (optional)
-# gunicorn==21.2.0
 
 # Development tools (optional)
 # python-dotenv==1.0.0
